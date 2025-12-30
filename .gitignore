@@ -37,8 +37,8 @@ Thumbs.db
 
 # Exports
 backend/exports/
-*.json
-*.html
+backend/exports/*.json
+backend/exports/*.html
 
 # Temporary files
 *.tmp
