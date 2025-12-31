@@ -27,11 +27,13 @@ const calculateMonthlySalaryFromEntries = async (employee, targetMonth, targetYe
       monthlyEntries: entries.length
     };
   } else {
-    // For Fix employees, use their current salary
+    // For Fix employees, use their stored grossSalary (or salary as fallback)
+    const grossSalary = employee.grossSalary || employee.salary || 0;
     const deductions = (employee.advancedSalary || 0) + (employee.pf || 0) + (employee.pt || 0);
+    const netSalary = grossSalary - deductions;
     return {
-      grossSalary: employee.salary || 0,
-      netSalary: (employee.salary || 0) - deductions,
+      grossSalary: grossSalary,
+      netSalary: netSalary,
       monthlyEntries: 0
     };
   }

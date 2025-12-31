@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
+import Logo from '../components/Logo';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -76,16 +77,42 @@ const Login = () => {
         border: 'none'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ fontSize: '56px', marginBottom: '16px' }}>💎</div>
-          <h2 style={{ 
-            fontSize: '28px',
-            fontWeight: '700', 
-            color: '#1f2937',
-            marginBottom: '8px'
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '20px',
+            marginBottom: '24px'
           }}>
-            GOMUKH DIAMOND
-          </h2>
-          <p style={{ color: '#6b7280', fontSize: '15px' }}>
+            <Logo size={150} />
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'flex-start',
+              lineHeight: '1.2'
+            }}>
+              <h2 style={{ 
+                fontSize: '32px',
+                fontWeight: '700', 
+                color: '#1f2937',
+                margin: 0,
+                letterSpacing: '0.5px'
+              }}>
+                GOMUKH
+              </h2>
+              <h2 style={{ 
+                fontSize: '32px',
+                fontWeight: '700', 
+                color: '#1f2937',
+                margin: 0,
+                letterSpacing: '0.5px'
+              }}>
+                DIAMOND
+              </h2>
+            </div>
+          </div>
+          <p style={{ color: '#6b7280', fontSize: '15px', marginTop: '8px' }}>
             Employee Management System
           </p>
         </div>

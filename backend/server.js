@@ -29,8 +29,30 @@ app.use('/api/salary-report', require('./routes/salaryReport'));
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/employee_management')
-.then(() => console.log('MongoDB Connected'))
+.then(() => {
+  console.log('MongoDB Connected');
+  initializeDepartments();
+})
 .catch(err => console.error('MongoDB Connection Error:', err));
+
+// Initialize default departments
+const initializeDepartments = async () => {
+  try {
+    const Department = require('./models/Department');
+    const defaultDepartments = ['Deepak', 'Laser', 'Galaxy', 'R Galaxy', 'Russian', 'Sarin', '4P'];
+    
+    for (const deptName of defaultDepartments) {
+      const existingDept = await Department.findOne({ name: deptName });
+      if (!existingDept) {
+        await Department.create({ name: deptName, subDepartments: [] });
+        console.log(`✓ Department "${deptName}" created`);
+      }
+    }
+    console.log('Departments initialized');
+  } catch (error) {
+    console.error('Error initializing departments:', error.message);
+  }
+};
 
 const PORT = process.env.PORT || 5000;
 

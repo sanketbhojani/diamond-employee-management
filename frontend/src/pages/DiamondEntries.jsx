@@ -104,8 +104,8 @@ const DiamondEntries = () => {
       if (selectedSubDepartment) params.append('subDepartment', selectedSubDepartment);
       
       const response = await api.get(`/employees?${params.toString()}`);
-      const chutakEmployees = response.data.employees.filter(emp => emp.employeeType === 'Chutak');
-      setEmployees(chutakEmployees);
+      // Allow both Fix and Chutak employees to have diamond entries
+      setEmployees(response.data.employees);
     } catch (error) {
       toast.error('Failed to fetch employees');
     }
@@ -399,7 +399,7 @@ const DiamondEntries = () => {
                           className="btn btn-danger px-3 py-1.5 text-xs min-w-0"
                           onClick={() => handleDelete(entry._id)} 
                         >
-                          🗑️
+                          Delete
                         </button>
                       </td>
                     </tr>
@@ -417,13 +417,13 @@ const DiamondEntries = () => {
           <div className="card w-full max-w-4xl relative mx-auto max-h-[90vh] flex flex-col shadow-2xl">
             <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-gray-200">
               <h2 className="m-0 text-2xl font-bold">
-                📝 Add Diamond Entry
+                Add Diamond Entry
               </h2>
               <button 
                 onClick={() => { setShowModal(false); resetForm(); }} 
-                className="bg-gray-100 border-none text-2xl cursor-pointer w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-300 text-gray-500 hover:bg-gray-200 hover:text-gray-800"
+                className="bg-gray-100 border-none text-sm cursor-pointer px-4 py-2 rounded-lg flex items-center justify-center transition-all duration-300 text-gray-500 hover:bg-gray-200 hover:text-gray-800 font-medium"
               >
-                ×
+                Close
               </button>
             </div>
             <form onSubmit={handleSubmit} className="flex flex-col flex-1">
@@ -482,11 +482,11 @@ const DiamondEntries = () => {
                         >
                           <option value="">Select Employee</option>
                           {filteredEmployees.length === 0 ? (
-                            <option disabled>No Chutak employees found</option>
+                            <option disabled>No employees found</option>
                           ) : (
                             filteredEmployees.map(emp => (
                               <option key={emp._id} value={emp._id}>
-                                {emp.name} ({emp.employeeId})
+                                {emp.name} ({emp.employeeId}) - {emp.employeeType}
                               </option>
                             ))
                           )}
@@ -631,8 +631,7 @@ const DiamondEntries = () => {
                   type="submit" 
                   className="btn btn-primary w-full py-3.5 text-base font-semibold"
                 >
-                  <span>💾</span>
-                  <span>Save Entries</span>
+                  Save Entries
                 </button>
               </div>
             </form>

@@ -20,7 +20,8 @@ const departmentSchema = new mongoose.Schema({
     required: true,
     unique: true,
     trim: true,
-    enum: ['4P', 'Auto', 'Galaxy', 'Laser', 'Sarin', 'Russian']
+    minlength: [1, 'Department name cannot be empty'],
+    maxlength: [100, 'Department name cannot exceed 100 characters']
   },
   subDepartments: [subDepartmentSchema]
 }, {
@@ -28,6 +29,7 @@ const departmentSchema = new mongoose.Schema({
 });
 
 module.exports = mongoose.model('Department', departmentSchema);
+
 
 
 

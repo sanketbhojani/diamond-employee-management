@@ -168,7 +168,7 @@ const BankDetails = () => {
       {showModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
           <div className="card" style={{ width: '500px', position: 'relative' }}>
-            <button onClick={() => { setShowModal(false); resetForm(); }} style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>×</button>
+            <button onClick={() => { setShowModal(false); resetForm(); }} style={{ position: 'absolute', top: '10px', right: '10px', background: '#f3f4f6', border: 'none', fontSize: '14px', cursor: 'pointer', padding: '8px 16px', borderRadius: '8px', fontWeight: '500', color: '#6b7280' }}>Close</button>
             <h2>{editingBank ? 'Edit Bank Detail' : 'Add Bank Detail'}</h2>
             <form onSubmit={handleSubmit}>
               <div className="form-group">

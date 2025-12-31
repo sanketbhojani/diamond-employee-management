@@ -4,7 +4,62 @@ const SalaryPayment = require('../models/SalaryPayment');
 const DiamondEntry = require('../models/DiamondEntry');
 const PDFDocument = require('pdfkit');
 
-// @desc    Generate salary receipt/invoice for employee
+// Function to convert number to Indian Rupee words
+function numberToWords(amount) {
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  
+  function convertHundreds(num) {
+    let result = '';
+    if (num >= 100) {
+      result += ones[Math.floor(num / 100)] + ' Hundred ';
+      num %= 100;
+    }
+    if (num >= 20) {
+      result += tens[Math.floor(num / 10)] + ' ';
+      num %= 10;
+    }
+    if (num > 0) {
+      result += ones[num] + ' ';
+    }
+    return result.trim();
+  }
+  
+  if (amount === 0) return 'Zero';
+  
+  const rupees = Math.floor(amount);
+  const paise = Math.round((amount - rupees) * 100);
+  
+  let words = '';
+  
+  if (rupees >= 10000000) {
+    words += convertHundreds(Math.floor(rupees / 10000000)) + ' Crore ';
+    rupees %= 10000000;
+  }
+  if (rupees >= 100000) {
+    words += convertHundreds(Math.floor(rupees / 100000)) + ' Lakh ';
+    rupees %= 100000;
+  }
+  if (rupees >= 1000) {
+    words += convertHundreds(Math.floor(rupees / 1000)) + ' Thousand ';
+    rupees %= 1000;
+  }
+  if (rupees > 0) {
+    words += convertHundreds(rupees);
+  }
+  
+  words = words.trim() || 'Zero';
+  words += ' Rupee' + (rupees !== 1 ? 's' : '');
+  
+  if (paise > 0) {
+    words += ' and ' + convertHundreds(paise) + ' Paise';
+  }
+  
+  return words + ' Only';
+}
+
+// @desc    Generate salary receipt for employee
 // @route   GET /api/salary-transfer/receipt/:employeeId
 // @access  Private
 exports.generateSalaryReceipt = async (req, res) => {
@@ -20,150 +75,362 @@ exports.generateSalaryReceipt = async (req, res) => {
     const targetMonth = parseInt(month) || new Date().getMonth() + 1;
     const targetYear = parseInt(year) || new Date().getFullYear();
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const currentDate = new Date();
+    const payDate = new Date(targetYear, targetMonth, 0); // Last day of the month
+    const daysInMonth = new Date(targetYear, targetMonth, 0).getDate();
+    
+    const formattedDate = currentDate.toLocaleDateString('en-IN', { 
+      day: '2-digit', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+    
+    const payDateFormatted = payDate.toLocaleDateString('en-IN', { 
+      day: '2-digit', 
+      month: 'long', 
+      year: 'numeric' 
+    });
 
     const doc = new PDFDocument({ 
       margin: 50,
       size: 'A4'
     });
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=Salary_Invoice_${employee.employeeId}_${targetMonth}_${targetYear}.pdf`);
+    res.setHeader('Content-Disposition', `attachment; filename=Payslip_${employee.employeeId}_${targetMonth}_${targetYear}.pdf`);
     
     doc.pipe(res);
 
-    // Generate Receipt Number
-    const receiptNumber = `SR-${targetYear}-${String(Date.now()).slice(-6)}`;
-
-    // Header with border
-    doc.rect(50, 50, 500, 100).stroke();
-    doc.fontSize(24).font('Helvetica-Bold').fillColor('#1a1a1a');
-    doc.text('GOMUKH DIAMOND', 60, 60, { width: 480, align: 'center' });
-    doc.fontSize(14).font('Helvetica');
-    doc.text('Salary Payment Invoice / Receipt', 60, 85, { width: 480, align: 'center' });
-    doc.text('Registered Office Address', 60, 105, { width: 480, align: 'center' });
-    doc.moveDown(2);
-
-    // Invoice Details Box
-    const startY = 180;
-    doc.rect(50, startY, 240, 80).stroke();
-    doc.fontSize(10).fillColor('#666');
-    doc.text('Invoice To:', 60, startY + 10);
-    doc.fontSize(12).fillColor('#000').font('Helvetica-Bold');
-    doc.text(employee.name, 60, startY + 25);
-    doc.font('Helvetica').fontSize(10);
-    doc.text(`ID: ${employee.employeeId}`, 60, startY + 40);
-    doc.text(`${employee.department?.name || 'N/A'} - ${employee.subDepartment}`, 60, startY + 55);
-    doc.text(`Type: ${employee.employeeType}`, 60, startY + 70);
-
-    // Invoice Info Box
-    doc.rect(310, startY, 240, 80).stroke();
-    doc.fontSize(10).fillColor('#666');
-    doc.text('Invoice Details:', 320, startY + 10);
-    doc.fontSize(12).fillColor('#000');
-    doc.text(`Invoice No: ${receiptNumber}`, 320, startY + 25);
-    doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, 320, startY + 40);
-    doc.text(`Period: ${monthNames[targetMonth - 1]} ${targetYear}`, 320, startY + 55);
-    doc.text(`Status: Paid`, 320, startY + 70);
-
-    doc.moveDown(3);
-
-    // Salary Breakdown Table
-    const tableStartY = 300;
-    doc.fontSize(12).font('Helvetica-Bold');
-    doc.text('Salary Breakdown', 50, tableStartY);
+    // Calculate values
+    const grossSalary = employee.grossSalary || 0;
+    const advancedSalary = employee.advancedSalary || 0;
+    const pf = employee.pf || 0;
+    const pt = employee.pt || 0;
+    const totalDeductions = advancedSalary + pf + pt;
+    const netSalary = employee.netSalary || 0;
     
-    // Table Header
-    doc.rect(50, tableStartY + 20, 500, 25).fillAndStroke('#f0f0f0', '#000');
-    doc.fillColor('#000');
-    doc.text('Description', 60, tableStartY + 28);
-    doc.text('Amount (₹)', 450, tableStartY + 28, { align: 'right' });
-
-    // Table Rows
-    let currentY = tableStartY + 45;
-    const rowHeight = 25;
-
-    // Gross Salary
-    doc.rect(50, currentY, 500, rowHeight).stroke();
-    doc.font('Helvetica').fontSize(11);
-    doc.text('Gross Salary', 60, currentY + 8);
-    doc.text(`₹${(employee.grossSalary || 0).toFixed(2)}`, 450, currentY + 8, { align: 'right' });
-    currentY += rowHeight;
-
-    // Deductions Header
-    doc.rect(50, currentY, 500, rowHeight).fillAndStroke('#fff5f5', '#000');
-    doc.font('Helvetica-Bold').fontSize(11);
-    doc.text('Deductions:', 60, currentY + 8);
-    currentY += rowHeight;
-
-    // Advanced Salary
-    doc.rect(50, currentY, 500, rowHeight).stroke();
-    doc.font('Helvetica').fontSize(11);
-    doc.text('  - Advanced Salary', 60, currentY + 8);
-    doc.text(`₹${(employee.advancedSalary || 0).toFixed(2)}`, 450, currentY + 8, { align: 'right' });
-    currentY += rowHeight;
-
-    // PF
-    doc.rect(50, currentY, 500, rowHeight).stroke();
-    doc.text('  - Provident Fund (PF)', 60, currentY + 8);
-    doc.text(`₹${(employee.pf || 0).toFixed(2)}`, 450, currentY + 8, { align: 'right' });
-    currentY += rowHeight;
-
-    // PT
-    doc.rect(50, currentY, 500, rowHeight).stroke();
-    doc.text('  - Professional Tax (PT)', 60, currentY + 8);
-    doc.text(`₹${(employee.pt || 0).toFixed(2)}`, 450, currentY + 8, { align: 'right' });
-    currentY += rowHeight;
-
-    // Total Deductions
-    const totalDeductions = (employee.advancedSalary || 0) + (employee.pf || 0) + (employee.pt || 0);
-    doc.rect(50, currentY, 500, rowHeight).fillAndStroke('#fff5f5', '#000');
-    doc.font('Helvetica-Bold').fontSize(11);
-    doc.text('Total Deductions', 60, currentY + 8);
-    doc.text(`₹${totalDeductions.toFixed(2)}`, 450, currentY + 8, { align: 'right' });
-    currentY += rowHeight;
-
-    // Net Salary
-    doc.rect(50, currentY, 500, rowHeight + 10).fillAndStroke('#e8f5e9', '#000');
-    doc.fontSize(14).font('Helvetica-Bold');
-    doc.text('Net Salary Payable', 60, currentY + 10);
-    doc.text(`₹${(employee.netSalary || 0).toFixed(2)}`, 450, currentY + 10, { align: 'right' });
-
-    currentY += rowHeight + 20;
-
-    // Payment Details
-    doc.moveDown();
-    doc.fontSize(12).font('Helvetica-Bold');
-    doc.text('Payment Details', 50, currentY);
-    currentY += 20;
-    doc.font('Helvetica').fontSize(11);
+    // Calculate Basic (50% of gross) and Allowances (50% of gross) for display
+    const basic = grossSalary * 0.5;
+    const allowances = grossSalary * 0.5;
     
-    if (employee.salaryType === 'bank' && employee.bankDetails?.accountNumber) {
-      doc.text(`Payment Method: Bank Transfer`, 50, currentY);
-      currentY += 15;
-      doc.text(`Account Number: ${employee.bankDetails.accountNumber}`, 50, currentY);
-      currentY += 15;
-      doc.text(`IFSC Code: ${employee.bankDetails.ifscCode}`, 50, currentY);
-      currentY += 15;
-      doc.text(`Bank: ${employee.bankDetails.bankName}`, 50, currentY);
-      currentY += 15;
-      doc.text(`Branch: ${employee.bankDetails.branchName}`, 50, currentY);
-    } else {
-      doc.text(`Payment Method: Cash`, 50, currentY);
-    }
+    // Get date of joining from createdAt or use current date
+    const dateOfJoining = employee.createdAt ? new Date(employee.createdAt).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }) : 'N/A';
+
+    let currentY = 50;
+
+    // ========== HEADER SECTION ==========
+    // Company Name (Left)
+    doc.fontSize(24)
+      .font('Helvetica-Bold')
+      .fillColor('#1e293b')
+      .text('GOMUKH DIAMOND', 50, currentY);
+    
+    // Location (Right)
+    doc.fontSize(10)
+      .font('Helvetica')
+      .fillColor('#64748b')
+      .text('Gujarat, India', 450, currentY, { align: 'right' });
+    
+    currentY += 35;
+    
+    // Payslip Title
+    doc.fontSize(18)
+      .font('Helvetica-Bold')
+      .fillColor('#1e293b')
+      .text(`Payslip for the month of ${monthNames[targetMonth - 1]} ${targetYear}`, 50, currentY, {
+        width: 500
+      });
 
     currentY += 30;
 
-    // Footer
-    doc.fontSize(10).fillColor('#666');
-    doc.text('This is a computer-generated invoice/receipt.', 50, currentY, { width: 500, align: 'center' });
-    currentY += 20;
-    doc.text('Thank you for your service!', 50, currentY, { width: 500, align: 'center' });
-    currentY += 40;
+    // ========== EMPLOYEE PAY SUMMARY SECTION ==========
+    doc.fontSize(12)
+      .font('Helvetica-Bold')
+      .fillColor('#1e293b')
+      .text('Employee Pay Summary', 50, currentY);
     
-    // Signature Line
-    doc.fontSize(10).fillColor('#000');
-    doc.text('_________________________', 400, currentY);
-    doc.text('Authorized Signatory', 400, currentY + 15, { align: 'right' });
-    doc.text('GOMUKH DIAMOND', 400, currentY + 30, { align: 'right' });
+    currentY += 20;
+    
+    // Employee Pay Summary Box
+    doc.rect(50, currentY, 500, 80)
+      .stroke('#cbd5e1');
+    
+    doc.fontSize(10)
+      .font('Helvetica')
+      .fillColor('#475569');
+    
+    // Left Column
+    doc.text(`Employee Name: ${employee.name}, ${employee.employeeId}`, 60, currentY + 10);
+    doc.text(`Designation: ${employee.department?.name || 'N/A'}${employee.subDepartment ? ' - ' + employee.subDepartment : ''}`, 60, currentY + 25);
+    doc.text(`Date of Joining: ${dateOfJoining}`, 60, currentY + 40);
+    doc.text(`Pay Period: ${monthNames[targetMonth - 1]} ${targetYear}`, 60, currentY + 55);
+    doc.text(`Pay Date: ${payDateFormatted}`, 60, currentY + 70);
+    
+    currentY += 100;
+    
+    // ========== EMPLOYEE NET PAY SECTION (PROMINENT) ==========
+    doc.rect(50, currentY, 500, 60)
+      .fillAndStroke('#e0f2fe', '#0284c7');
+    
+    doc.fontSize(11)
+      .font('Helvetica-Bold')
+      .fillColor('#0c4a6e')
+      .text('Employee Net Pay', 60, currentY + 10);
+    
+    doc.fontSize(20)
+      .font('Helvetica-Bold')
+      .fillColor('#0c4a6e')
+      .text(`₹${netSalary.toFixed(2)}`, 60, currentY + 30);
+    
+    doc.fontSize(10)
+      .font('Helvetica')
+      .fillColor('#0c4a6e')
+      .text(`Paid Days: ${daysInMonth}`, 400, currentY + 20);
+    doc.text(`LOP Days: 0`, 400, currentY + 40);
+    
+    currentY += 80;
+
+    // ========== EARNINGS TABLE ==========
+    doc.fontSize(12)
+      .font('Helvetica-Bold')
+      .fillColor('#1e293b')
+      .text('Earnings', 50, currentY);
+    
+    currentY += 20;
+    
+    const earningsTableY = currentY;
+    const rowHeight = 25;
+    const colWidths = { desc: 250, amount: 125, ytd: 125 };
+    
+    // Earnings Table Header
+    doc.rect(50, earningsTableY, 500, rowHeight)
+      .fillAndStroke('#1e293b', '#1e293b');
+    
+    doc.fontSize(10)
+      .font('Helvetica-Bold')
+      .fillColor('#ffffff')
+      .text('EARNINGS', 60, earningsTableY + 8);
+    doc.text('AMOUNT', 60 + colWidths.desc, earningsTableY + 8);
+    doc.text('YTD', 60 + colWidths.desc + colWidths.amount, earningsTableY + 8);
+    
+    currentY = earningsTableY + rowHeight;
+    
+    // Basic
+    doc.rect(50, currentY, 500, rowHeight)
+      .stroke('#e2e8f0');
+    doc.fontSize(10)
+      .font('Helvetica')
+      .fillColor('#1e293b')
+      .text('Basic', 60, currentY + 8);
+    doc.text(`₹${basic.toFixed(2)}`, 60 + colWidths.desc, currentY + 8);
+    doc.text(`₹${basic.toFixed(2)}`, 60 + colWidths.desc + colWidths.amount, currentY + 8);
+    currentY += rowHeight;
+    
+    // Allowances (if any)
+    if (allowances > 0) {
+      doc.rect(50, currentY, 500, rowHeight)
+        .stroke('#e2e8f0');
+      doc.text('Fixed Allowance', 60, currentY + 8);
+      doc.text(`₹${allowances.toFixed(2)}`, 60 + colWidths.desc, currentY + 8);
+      doc.text(`₹${allowances.toFixed(2)}`, 60 + colWidths.desc + colWidths.amount, currentY + 8);
+      currentY += rowHeight;
+    }
+    
+    // Gross Earnings
+    doc.rect(50, currentY, 500, rowHeight)
+      .fillAndStroke('#e0f2fe', '#0284c7');
+    doc.fontSize(10)
+      .font('Helvetica-Bold')
+      .fillColor('#0c4a6e')
+      .text('Gross Earnings', 60, currentY + 8);
+    doc.text(`₹${grossSalary.toFixed(2)}`, 60 + colWidths.desc, currentY + 8);
+    doc.text(`₹${grossSalary.toFixed(2)}`, 60 + colWidths.desc + colWidths.amount, currentY + 8);
+    
+    currentY += rowHeight + 20;
+    
+    // ========== DEDUCTIONS TABLE ==========
+    doc.fontSize(12)
+      .font('Helvetica-Bold')
+      .fillColor('#1e293b')
+      .text('Deductions', 50, currentY);
+    
+    currentY += 20;
+    
+    const deductionsTableY = currentY;
+    
+    // Deductions Table Header
+    doc.rect(50, deductionsTableY, 500, rowHeight)
+      .fillAndStroke('#1e293b', '#1e293b');
+    
+    doc.fontSize(10)
+      .font('Helvetica-Bold')
+      .fillColor('#ffffff')
+      .text('DEDUCTIONS', 60, deductionsTableY + 8);
+    doc.text('AMOUNT', 60 + colWidths.desc, deductionsTableY + 8);
+    doc.text('YTD', 60 + colWidths.desc + colWidths.amount, deductionsTableY + 8);
+    
+    currentY = deductionsTableY + rowHeight;
+    
+    // Professional Tax
+    if (pt > 0) {
+      doc.rect(50, currentY, 500, rowHeight)
+        .stroke('#e2e8f0');
+      doc.fontSize(10)
+        .font('Helvetica')
+        .fillColor('#1e293b')
+        .text('Professional Tax', 60, currentY + 8);
+      doc.text(`₹${pt.toFixed(2)}`, 60 + colWidths.desc, currentY + 8);
+      doc.text(`₹${pt.toFixed(2)}`, 60 + colWidths.desc + colWidths.amount, currentY + 8);
+      currentY += rowHeight;
+    }
+    
+    // Advanced Salary
+    if (advancedSalary > 0) {
+      doc.rect(50, currentY, 500, rowHeight)
+        .stroke('#e2e8f0');
+      doc.text('Advanced Salary', 60, currentY + 8);
+      doc.text(`₹${advancedSalary.toFixed(2)}`, 60 + colWidths.desc, currentY + 8);
+      doc.text(`₹${advancedSalary.toFixed(2)}`, 60 + colWidths.desc + colWidths.amount, currentY + 8);
+      currentY += rowHeight;
+    }
+    
+    // PF
+    if (pf > 0) {
+      doc.rect(50, currentY, 500, rowHeight)
+        .stroke('#e2e8f0');
+      doc.text('Provident Fund (PF)', 60, currentY + 8);
+      doc.text(`₹${pf.toFixed(2)}`, 60 + colWidths.desc, currentY + 8);
+      doc.text(`₹${pf.toFixed(2)}`, 60 + colWidths.desc + colWidths.amount, currentY + 8);
+      currentY += rowHeight;
+    }
+    
+    // Total Deductions
+    doc.rect(50, currentY, 500, rowHeight)
+      .fillAndStroke('#fee2e2', '#dc2626');
+    doc.fontSize(10)
+      .font('Helvetica-Bold')
+      .fillColor('#991b1b')
+      .text('Total Deductions', 60, currentY + 8);
+    doc.text(`₹${totalDeductions.toFixed(2)}`, 60 + colWidths.desc, currentY + 8);
+    doc.text(`₹${totalDeductions.toFixed(2)}`, 60 + colWidths.desc + colWidths.amount, currentY + 8);
+    
+    currentY += rowHeight + 20;
+    
+    // ========== NET PAY SUMMARY TABLE ==========
+    doc.fontSize(12)
+      .font('Helvetica-Bold')
+      .fillColor('#1e293b')
+      .text('Net Pay', 50, currentY);
+    
+    currentY += 20;
+    
+    const netPayTableY = currentY;
+    const netPayRowHeight = 30;
+    
+    // Net Pay Table
+    doc.rect(50, netPayTableY, 500, netPayRowHeight * 3)
+      .stroke('#cbd5e1');
+    
+    // Gross Earnings Row
+    doc.rect(50, netPayTableY, 500, netPayRowHeight)
+      .stroke('#cbd5e1');
+    doc.fontSize(10)
+      .font('Helvetica-Bold')
+      .fillColor('#1e293b')
+      .text('NET PAY', 60, netPayTableY + 10);
+    doc.text('AMOUNT', 400, netPayTableY + 10);
+    
+    currentY = netPayTableY + netPayRowHeight;
+    
+    // Gross Earnings
+    doc.rect(50, currentY, 500, netPayRowHeight)
+      .stroke('#cbd5e1');
+    doc.fontSize(10)
+      .font('Helvetica')
+      .fillColor('#475569')
+      .text('Gross Earnings', 60, currentY + 10);
+    doc.text(`₹${grossSalary.toFixed(2)}`, 400, currentY + 10);
+    
+    currentY += netPayRowHeight;
+    
+    // Total Deductions
+    doc.rect(50, currentY, 500, netPayRowHeight)
+      .stroke('#cbd5e1');
+    doc.text('Total Deductions', 60, currentY + 10);
+    doc.font('Helvetica-Bold')
+      .fillColor('#dc2626')
+      .text(`(-) ₹${totalDeductions.toFixed(2)}`, 400, currentY + 10);
+    
+    currentY += netPayRowHeight;
+    
+    // Total Net Payable
+    doc.rect(50, currentY, 500, netPayRowHeight)
+      .fillAndStroke('#dcfce7', '#16a34a');
+    doc.fontSize(11)
+      .font('Helvetica-Bold')
+      .fillColor('#166534')
+      .text('Total Net Payable', 60, currentY + 10);
+    doc.text(`₹${netSalary.toFixed(2)}`, 400, currentY + 10);
+    
+    currentY += netPayRowHeight + 20;
+    
+    // ========== AMOUNT IN WORDS ==========
+    const amountInWords = numberToWords(netSalary);
+    doc.fontSize(10)
+      .font('Helvetica')
+      .fillColor('#475569')
+      .text('Total Net Payable', 50, currentY);
+    doc.font('Helvetica-Bold')
+      .fillColor('#1e293b')
+      .text(`₹${netSalary.toFixed(2)}`, 180, currentY);
+    doc.font('Helvetica')
+      .fillColor('#64748b')
+      .text(`(Indian Rupee ${amountInWords})`, 250, currentY);
+    
+    currentY += 30;
+    
+    // ========== FORMULA ==========
+    doc.fontSize(9)
+      .font('Helvetica')
+      .fillColor('#64748b')
+      .text('Total Net Payable = Gross Earnings - Total Deductions', 50, currentY);
+    
+    currentY += 30;
+
+    // ========== FOOTER SECTION ==========
+    // Payment Method Info (if bank transfer)
+    const hasBankDetails = employee.salaryType === 'bank' && 
+                          employee.bankDetails && 
+                          employee.bankDetails.accountNumber && 
+                          employee.bankDetails.accountNumber.trim() !== '';
+    
+    if (hasBankDetails) {
+      doc.fontSize(9)
+        .font('Helvetica')
+        .fillColor('#64748b')
+        .text(`Payment Method: Bank Transfer | Account: ${employee.bankDetails.accountNumber} | IFSC: ${employee.bankDetails.ifscCode || 'N/A'}`, 50, currentY, {
+          width: 500
+        });
+      currentY += 15;
+    } else {
+      doc.fontSize(9)
+        .font('Helvetica')
+        .fillColor('#64748b')
+        .text('Payment Method: Cash', 50, currentY);
+      currentY += 15;
+    }
+    
+    // Disclaimer
+    doc.fontSize(8)
+      .font('Helvetica')
+      .fillColor('#94a3b8')
+      .text('This is a computer-generated payslip.', 50, currentY, { 
+        width: 500, 
+        align: 'center' 
+      });
 
     doc.end();
   } catch (error) {

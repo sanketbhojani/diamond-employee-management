@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
+import Logo from './Logo';
 
 const Layout = () => {
   const navigate = useNavigate();
@@ -124,22 +125,51 @@ const Layout = () => {
           marginBottom: '32px', 
           display: 'flex', 
           alignItems: 'center', 
-          justifyContent: 'space-between',
+          justifyContent: sidebarOpen ? 'space-between' : 'center',
           paddingBottom: '24px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          gap: '12px'
         }}>
-          {sidebarOpen && (
-            <h2 style={{ 
-              fontSize: '22px', 
-              fontWeight: '700',
-              background: 'linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>
-              GOMUKH DIAMOND
-            </h2>
-          )}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '16px',
+            flex: sidebarOpen ? '1' : 'none',
+            minWidth: 0
+          }}>
+            <Logo size={sidebarOpen ? 80 : 60} />
+            {sidebarOpen && (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                lineHeight: '1.2'
+              }}>
+                <h2 style={{ 
+                  fontSize: '20px', 
+                  fontWeight: '700',
+                  color: '#ffffff',
+                  margin: 0,
+                  whiteSpace: 'nowrap',
+                  letterSpacing: '0.5px',
+                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                }}>
+                  GOMUKH
+                </h2>
+                <h2 style={{ 
+                  fontSize: '20px', 
+                  fontWeight: '700',
+                  color: '#ffffff',
+                  margin: 0,
+                  whiteSpace: 'nowrap',
+                  letterSpacing: '0.5px',
+                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                }}>
+                  DIAMOND
+                </h2>
+              </div>
+            )}
+          </div>
           <button
             onClick={toggleSidebar}
             style={{
@@ -155,7 +185,7 @@ const Layout = () => {
               alignItems: 'center',
               justifyContent: 'center',
               transition: 'all 0.3s',
-              marginLeft: sidebarOpen ? 'auto' : '0'
+              flexShrink: 0
             }}
             onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
             onMouseLeave={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.1)'}
@@ -254,7 +284,9 @@ const Layout = () => {
           paddingTop: isMobile ? '72px' : '24px',
           background: 'linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%)',
           minHeight: '100vh',
-          width: '100%'
+          width: '100%',
+          overflowX: 'hidden',
+          boxSizing: 'border-box'
         }}
       >
         <Outlet />

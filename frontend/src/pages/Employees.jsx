@@ -12,10 +12,12 @@ const Employees = () => {
   const [filterDept, setFilterDept] = useState('');
   const [filterSubDept, setFilterSubDept] = useState('');
   const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth <= 768);
+      setIsTablet(window.innerWidth <= 1024 && window.innerWidth > 768);
     };
     
     // Initialize on mount
@@ -214,12 +216,13 @@ const Employees = () => {
   );
 
   return (
-    <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ width: '100%', boxSizing: 'border-box', overflowX: 'hidden' }}>
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        marginBottom: '24px',
+        marginBottom: '20px',
+        padding: '0 20px',
         flexWrap: 'wrap',
         gap: '16px'
       }}>
@@ -249,7 +252,7 @@ const Employees = () => {
       </div>
 
       {/* Search and Filters */}
-      <div className="card" style={{ marginBottom: '24px' }}>
+      <div className="card" style={{ marginBottom: '20px', marginLeft: '20px', marginRight: '20px' }}>
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
@@ -288,77 +291,384 @@ const Employees = () => {
       </div>
 
       {/* Employees Table */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)' }}>
-          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>
-            Employee List ({employees.length})
-          </h3>
+      <div className="card" style={{ 
+        padding: 0, 
+        overflow: 'hidden', 
+        width: '100%', 
+        maxWidth: '100%',
+        marginLeft: '20px',
+        marginRight: '20px',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+        borderRadius: '12px',
+        border: '1px solid rgba(0, 0, 0, 0.05)',
+        background: '#ffffff'
+      }}>
+        <div style={{ 
+          padding: '24px 28px', 
+          borderBottom: '2px solid #e5e7eb',
+          background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ 
+              margin: 0, 
+              fontSize: '20px', 
+              fontWeight: '700',
+              color: '#1f2937',
+              letterSpacing: '-0.5px'
+            }}>
+              Employee List
+            </h3>
+            <div style={{
+              padding: '6px 16px',
+              background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+              color: 'white',
+              borderRadius: '20px',
+              fontSize: '14px',
+              fontWeight: '600',
+              boxShadow: '0 2px 4px rgba(99, 102, 241, 0.3)'
+            }}>
+              {employees.length} {employees.length === 1 ? 'Employee' : 'Employees'}
+            </div>
+          </div>
         </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table className="table" style={{ margin: 0 }}>
+        <div style={{ 
+          width: '100%', 
+          overflowX: 'hidden', 
+          WebkitOverflowScrolling: 'touch', 
+          background: '#ffffff',
+          maxWidth: '100%'
+        }}>
+          <table className="table" style={{ 
+            margin: 0, 
+            width: '100%', 
+            tableLayout: 'fixed', 
+            borderCollapse: 'separate', 
+            borderSpacing: 0 
+          }}>
             <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Mobile</th>
-                <th>Department</th>
-                <th>Sub-Dept</th>
-                <th>Type</th>
-                <th>Net Salary</th>
-                <th>Advanced</th>
-                <th>PF</th>
-                <th>PT</th>
-                <th>Gross</th>
-                <th>Actions</th>
+              <tr style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)' }}>
+                <th style={{ 
+                  width: isMobile ? '0' : '8%', 
+                  display: isMobile ? 'none' : 'table-cell', 
+                  padding: '18px 14px', 
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#000000',
+                  textTransform: 'none',
+                  letterSpacing: '0',
+                  borderBottom: '3px solid #cbd5e1'
+                }}>ID</th>
+                <th style={{ 
+                  width: isMobile ? '25%' : '12%', 
+                  padding: '18px 14px', 
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#000000',
+                  textTransform: 'none',
+                  letterSpacing: '0',
+                  borderBottom: '3px solid #cbd5e1'
+                }}>Name</th>
+                <th style={{ 
+                  width: isMobile ? '0' : '15%', 
+                  display: isMobile ? 'none' : 'table-cell', 
+                  padding: '18px 14px', 
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#000000',
+                  textTransform: 'none',
+                  letterSpacing: '0',
+                  borderBottom: '3px solid #cbd5e1'
+                }}>Email</th>
+                <th style={{ 
+                  width: isMobile ? '0' : '10%', 
+                  display: isMobile ? 'none' : 'table-cell', 
+                  padding: '18px 14px', 
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#000000',
+                  textTransform: 'none',
+                  letterSpacing: '0',
+                  borderBottom: '3px solid #cbd5e1'
+                }}>Mobile</th>
+                <th style={{ 
+                  width: isMobile ? '20%' : '10%', 
+                  padding: '18px 14px', 
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#000000',
+                  textTransform: 'none',
+                  letterSpacing: '0',
+                  borderBottom: '3px solid #cbd5e1'
+                }}>Department</th>
+                <th style={{ 
+                  width: isMobile || isTablet ? '0' : '8%', 
+                  display: isMobile || isTablet ? 'none' : 'table-cell', 
+                  padding: '18px 14px', 
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#000000',
+                  textTransform: 'none',
+                  letterSpacing: '0',
+                  borderBottom: '3px solid #cbd5e1'
+                }}>Sub-Dept</th>
+                <th style={{ 
+                  width: isMobile ? '12%' : '8%', 
+                  padding: '18px 14px', 
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#000000',
+                  textTransform: 'none',
+                  letterSpacing: '0',
+                  borderBottom: '3px solid #cbd5e1',
+                  minWidth: '80px'
+                }}>Type</th>
+                <th style={{ 
+                  width: isMobile ? '15%' : '10%', 
+                  padding: '18px 14px', 
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#000000',
+                  textTransform: 'none',
+                  letterSpacing: '0',
+                  borderBottom: '3px solid #cbd5e1'
+                }}>Net Salary</th>
+                <th style={{ 
+                  width: isMobile || isTablet ? '0' : '8%', 
+                  display: isMobile || isTablet ? 'none' : 'table-cell', 
+                  padding: '18px 14px', 
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#000000',
+                  textTransform: 'none',
+                  letterSpacing: '0',
+                  borderBottom: '3px solid #cbd5e1'
+                }}>Advanced</th>
+                <th style={{ 
+                  width: isMobile || isTablet ? '0' : '6%', 
+                  display: isMobile || isTablet ? 'none' : 'table-cell', 
+                  padding: '18px 14px', 
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#000000',
+                  textTransform: 'none',
+                  letterSpacing: '0',
+                  borderBottom: '3px solid #cbd5e1'
+                }}>PF</th>
+                <th style={{ 
+                  width: isMobile || isTablet ? '0' : '6%', 
+                  display: isMobile || isTablet ? 'none' : 'table-cell', 
+                  padding: '18px 14px', 
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#000000',
+                  textTransform: 'none',
+                  letterSpacing: '0',
+                  borderBottom: '3px solid #cbd5e1'
+                }}>PT</th>
+                <th style={{ 
+                  width: isMobile ? '0' : '10%', 
+                  display: isMobile ? 'none' : 'table-cell', 
+                  padding: '18px 14px', 
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#000000',
+                  textTransform: 'none',
+                  letterSpacing: '0',
+                  borderBottom: '3px solid #cbd5e1'
+                }}>Gross</th>
+                <th style={{ 
+                  width: isMobile ? '30%' : '15%', 
+                  padding: '18px 14px', 
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#000000',
+                  textTransform: 'none',
+                  letterSpacing: '0',
+                  borderBottom: '3px solid #cbd5e1'
+                }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {employees.length === 0 ? (
                 <tr>
-                  <td colSpan="13" style={{ textAlign: 'center', padding: '40px 20px' }}>
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>👥</div>
-                    <div style={{ color: '#6b7280', fontSize: '16px' }}>No employees found</div>
+                  <td colSpan="13" style={{ 
+                    textAlign: 'center', 
+                    padding: '60px 20px',
+                    background: '#ffffff'
+                  }}>
+                    <div style={{ 
+                      fontSize: '64px', 
+                      marginBottom: '20px',
+                      opacity: 0.5
+                    }}>👥</div>
+                    <div style={{ 
+                      color: '#64748b', 
+                      fontSize: '18px',
+                      fontWeight: '600',
+                      marginBottom: '8px'
+                    }}>No Employees Found</div>
+                    <div style={{ 
+                      color: '#94a3b8', 
+                      fontSize: '14px'
+                    }}>Get started by adding your first employee</div>
                   </td>
                 </tr>
               ) : (
-                employees.map((emp) => (
-                  <tr key={emp._id}>
-                    <td><strong>{emp.employeeId}</strong></td>
-                    <td>{emp.name}</td>
-                    <td style={{ fontSize: '14px' }}>{emp.email}</td>
-                    <td>{emp.mobile}</td>
-                    <td>{emp.department?.name || 'N/A'}</td>
-                    <td>{emp.subDepartment}</td>
-                    <td>
+                employees.map((emp, index) => (
+                  <tr 
+                    key={emp._id}
+                    style={{
+                      background: index % 2 === 0 ? '#ffffff' : '#f8fafc',
+                      transition: 'all 0.2s ease',
+                      borderBottom: '1px solid #e5e7eb'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#f1f5f9';
+                      e.currentTarget.style.transform = 'scale(1.001)';
+                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.05)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = index % 2 === 0 ? '#ffffff' : '#f8fafc';
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  >
+                    <td style={{ 
+                      fontSize: '14px', 
+                      display: isMobile ? 'none' : 'table-cell', 
+                      padding: '16px 12px', 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap',
+                      color: '#1e293b',
+                      fontWeight: '600'
+                    }}><strong>{emp.employeeId}</strong></td>
+                    <td style={{ 
+                      fontSize: '15px', 
+                      fontWeight: '600', 
+                      padding: '16px 12px', 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap',
+                      color: '#0f172a'
+                    }}>{emp.name}</td>
+                    <td style={{ 
+                      fontSize: '14px', 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap', 
+                      display: isMobile ? 'none' : 'table-cell', 
+                      padding: '16px 12px',
+                      color: '#475569'
+                    }} title={emp.email}>{emp.email}</td>
+                    <td style={{ 
+                      fontSize: '14px', 
+                      display: isMobile ? 'none' : 'table-cell', 
+                      padding: '16px 12px', 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap',
+                      color: '#475569'
+                    }}>{emp.mobile}</td>
+                    <td style={{ 
+                      fontSize: '14px', 
+                      padding: '16px 12px', 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap',
+                      color: '#334155',
+                      fontWeight: '500'
+                    }}>{emp.department?.name || 'N/A'}</td>
+                    <td style={{ 
+                      fontSize: '14px', 
+                      display: isMobile || isTablet ? 'none' : 'table-cell', 
+                      padding: '16px 12px', 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap',
+                      color: '#64748b'
+                    }}>{emp.subDepartment || '-'}</td>
+                    <td style={{ padding: '16px 12px', minWidth: '80px', textAlign: 'center' }}>
                       <span style={{
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        fontWeight: '500',
-                        background: emp.employeeType === 'Fix' ? '#dcfce7' : '#fef3c7',
-                        color: emp.employeeType === 'Fix' ? '#166534' : '#92400e'
+                        padding: '6px 14px',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        fontWeight: '700',
+                        background: emp.employeeType === 'Fix' 
+                          ? 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)' 
+                          : 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                        color: emp.employeeType === 'Fix' ? '#166534' : '#92400e',
+                        display: 'inline-block',
+                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.15)',
+                        border: `2px solid ${emp.employeeType === 'Fix' ? '#86efac' : '#fcd34d'}`,
+                        whiteSpace: 'nowrap',
+                        minWidth: '60px',
+                        textAlign: 'center'
                       }}>
                         {emp.employeeType}
                       </span>
                     </td>
-                    <td><strong>₹{emp.netSalary?.toFixed(2) || '0.00'}</strong></td>
-                    <td>₹{emp.advancedSalary?.toFixed(2) || '0.00'}</td>
-                    <td>₹{emp.pf?.toFixed(2) || '0.00'}</td>
-                    <td>₹{emp.pt?.toFixed(2) || '0.00'}</td>
-                    <td>₹{emp.grossSalary?.toFixed(2) || '0.00'}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    <td style={{ 
+                      fontSize: '15px', 
+                      fontWeight: '700', 
+                      padding: '16px 12px', 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap',
+                      color: '#059669'
+                    }}>₹{emp.netSalary?.toFixed(2) || '0.00'}</td>
+                    <td style={{ 
+                      fontSize: '14px', 
+                      display: isMobile || isTablet ? 'none' : 'table-cell', 
+                      padding: '16px 12px', 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap',
+                      color: '#64748b'
+                    }}>₹{emp.advancedSalary?.toFixed(2) || '0.00'}</td>
+                    <td style={{ 
+                      fontSize: '14px', 
+                      display: isMobile || isTablet ? 'none' : 'table-cell', 
+                      padding: '16px 12px', 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap',
+                      color: '#64748b'
+                    }}>₹{emp.pf?.toFixed(2) || '0.00'}</td>
+                    <td style={{ 
+                      fontSize: '14px', 
+                      display: isMobile || isTablet ? 'none' : 'table-cell', 
+                      padding: '16px 12px', 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap',
+                      color: '#64748b'
+                    }}>₹{emp.pt?.toFixed(2) || '0.00'}</td>
+                    <td style={{ 
+                      fontSize: '15px', 
+                      fontWeight: '600', 
+                      display: isMobile ? 'none' : 'table-cell', 
+                      padding: '16px 12px', 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap',
+                      color: '#0369a1'
+                    }}>₹{emp.grossSalary?.toFixed(2) || '0.00'}</td>
+                    <td style={{ padding: '16px 12px' }}>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                         <button 
                           className="btn btn-secondary" 
                           onClick={() => openEditModal(emp)} 
                           style={{ 
-                            padding: '6px 12px', 
-                            fontSize: '12px',
-                            minWidth: 'auto'
+                            padding: '7px 14px', 
+                            fontSize: '13px',
+                            minWidth: 'auto',
+                            borderRadius: '6px',
+                            fontWeight: '600',
+                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
                           }}
                         >
-                          ✏️
+                          Edit
                         </button>
                         <button 
                           className="btn btn-primary" 
@@ -370,33 +680,39 @@ const Employees = () => {
                               const url = window.URL.createObjectURL(new Blob([response.data]));
                               const link = document.createElement('a');
                               link.href = url;
-                              link.setAttribute('download', `Salary_Invoice_${emp.employeeId}.pdf`);
+                              link.setAttribute('download', `Salary_Receipt_${emp.employeeId}.pdf`);
                               document.body.appendChild(link);
                               link.click();
                               link.remove();
-                              toast.success('Salary invoice generated successfully');
+                              toast.success('Salary receipt generated successfully');
                             } catch (error) {
-                              toast.error('Failed to generate invoice');
+                              toast.error('Failed to generate receipt');
                             }
                           }} 
                           style={{ 
-                            padding: '6px 12px', 
-                            fontSize: '12px',
-                            minWidth: 'auto'
+                            padding: '7px 14px', 
+                            fontSize: '13px',
+                            minWidth: 'auto',
+                            borderRadius: '6px',
+                            fontWeight: '600',
+                            boxShadow: '0 2px 4px rgba(99, 102, 241, 0.3)'
                           }}
                         >
-                          📄
+                          Receipt
                         </button>
                         <button 
                           className="btn btn-danger" 
                           onClick={() => handleDelete(emp._id)} 
                           style={{ 
-                            padding: '6px 12px', 
-                            fontSize: '12px',
-                            minWidth: 'auto'
+                            padding: '7px 14px', 
+                            fontSize: '13px',
+                            minWidth: 'auto',
+                            borderRadius: '6px',
+                            fontWeight: '600',
+                            boxShadow: '0 2px 4px rgba(239, 68, 68, 0.3)'
                           }}
                         >
-                          🗑️
+                          Delete
                         </button>
                       </div>
                     </td>
@@ -443,23 +759,23 @@ const Employees = () => {
               borderBottom: '2px solid var(--border-color)'
             }}>
               <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '700' }}>
-                {editingEmployee ? '✏️ Edit Employee' : '➕ Add Employee'}
+                {editingEmployee ? 'Edit Employee' : 'Add Employee'}
               </h2>
               <button 
                 onClick={() => { setShowModal(false); resetForm(); }} 
                 style={{ 
                   background: '#f3f4f6',
                   border: 'none', 
-                  fontSize: '24px', 
+                  fontSize: '14px', 
                   cursor: 'pointer',
-                  width: '36px',
-                  height: '36px',
+                  padding: '8px 16px',
                   borderRadius: '8px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   transition: 'all 0.3s',
-                  color: '#6b7280'
+                  color: '#6b7280',
+                  fontWeight: '500'
                 }}
                 onMouseEnter={(e) => {
                   e.target.style.background = '#e5e7eb';
@@ -470,7 +786,7 @@ const Employees = () => {
                   e.target.style.color = '#6b7280';
                 }}
               >
-                ×
+                Close
               </button>
             </div>
             <form onSubmit={handleSubmit} style={{ maxHeight: 'calc(90vh - 120px)', overflowY: 'auto', paddingRight: '8px' }}>
@@ -601,17 +917,7 @@ const Employees = () => {
                     fontWeight: '600'
                   }}
                 >
-                  {editingEmployee ? (
-                    <>
-                      <span>💾</span>
-                      <span>Update Employee</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>➕</span>
-                      <span>Create Employee</span>
-                    </>
-                  )}
+                  {editingEmployee ? 'Update Employee' : 'Create Employee'}
                 </button>
               </div>
             </form>

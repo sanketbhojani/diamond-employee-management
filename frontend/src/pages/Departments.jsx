@@ -13,7 +13,8 @@ const Departments = () => {
   const [subDeptName, setSubDeptName] = useState('');
   const [editingSubDept, setEditingSubDept] = useState(null);
 
-  const departmentNames = ['4P', 'Auto', 'Galaxy', 'Laser', 'Sarin', 'Russian'];
+  // Predefined department suggestions (optional)
+  const departmentSuggestions = ['Deepak', 'Laser', 'Galaxy', 'R Galaxy', 'Russian', 'Sarin', '4P'];
 
   useEffect(() => {
     fetchDepartments();
@@ -220,7 +221,7 @@ const Departments = () => {
                       minWidth: 'auto'
                     }}
                   >
-                    ✏️
+                    Edit
                   </button>
                   <button 
                     className="btn btn-danger" 
@@ -231,7 +232,7 @@ const Departments = () => {
                       minWidth: 'auto'
                     }}
                   >
-                    🗑️
+                    Delete
                   </button>
                 </div>
               </div>
@@ -293,7 +294,7 @@ const Departments = () => {
                               minWidth: 'auto'
                             }}
                           >
-                            ✏️
+                            Edit
                           </button>
                           <button 
                             className="btn btn-danger" 
@@ -304,7 +305,7 @@ const Departments = () => {
                               minWidth: 'auto'
                             }}
                           >
-                            🗑️
+                            Delete
                           </button>
                         </div>
                       </div>
@@ -361,23 +362,23 @@ const Departments = () => {
               borderBottom: '2px solid var(--border-color)'
             }}>
               <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '700' }}>
-                {editingDept ? '✏️ Edit Department' : '➕ Add Department'}
+                {editingDept ? 'Edit Department' : 'Add Department'}
               </h2>
               <button 
                 onClick={() => { setShowModal(false); setEditingDept(null); }} 
                 style={{ 
                   background: '#f3f4f6',
                   border: 'none', 
-                  fontSize: '24px', 
+                  fontSize: '14px', 
                   cursor: 'pointer',
-                  width: '36px',
-                  height: '36px',
+                  padding: '8px 16px',
                   borderRadius: '8px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   transition: 'all 0.3s',
-                  color: '#6b7280'
+                  color: '#6b7280',
+                  fontWeight: '500'
                 }}
                 onMouseEnter={(e) => {
                   e.target.style.background = '#e5e7eb';
@@ -388,17 +389,86 @@ const Departments = () => {
                   e.target.style.color = '#6b7280';
                 }}
               >
-                ×
+                Close
               </button>
             </div>
             <div className="form-group">
               <label>Department Name *</label>
-              <select value={formData.name} onChange={(e) => setFormData({ name: e.target.value })} required>
-                <option value="">Select Department</option>
-                {departmentNames.map(name => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
+              <input 
+                type="text" 
+                value={formData.name} 
+                onChange={(e) => setFormData({ name: e.target.value })} 
+                required 
+                placeholder="Enter department name (e.g., Deepak, Laser, Galaxy, etc.)"
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  fontSize: '15px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  transition: 'all 0.3s',
+                  outline: 'none'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#6366f1';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e5e7eb';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+              {!editingDept && formData.name === '' && (
+                <div style={{ 
+                  marginTop: '12px', 
+                  padding: '12px', 
+                  background: '#f0f9ff', 
+                  borderRadius: '8px',
+                  border: '1px solid #bae6fd'
+                }}>
+                  <p style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#0369a1', fontWeight: '600' }}>
+                    💡 Quick suggestions:
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {departmentSuggestions.map(name => {
+                      const exists = departments.some(dept => dept.name === name);
+                      return (
+                        <button
+                          key={name}
+                          type="button"
+                          onClick={() => setFormData({ name })}
+                          disabled={exists}
+                          style={{
+                            padding: '6px 12px',
+                            fontSize: '13px',
+                            border: exists ? '1px solid #d1d5db' : '1px solid #3b82f6',
+                            borderRadius: '6px',
+                            background: exists ? '#f3f4f6' : '#eff6ff',
+                            color: exists ? '#9ca3af' : '#1e40af',
+                            cursor: exists ? 'not-allowed' : 'pointer',
+                            transition: 'all 0.2s',
+                            fontWeight: '500'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!exists) {
+                              e.target.style.background = '#dbeafe';
+                              e.target.style.transform = 'translateY(-1px)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!exists) {
+                              e.target.style.background = '#eff6ff';
+                              e.target.style.transform = 'translateY(0)';
+                            }
+                          }}
+                        >
+                          {name} {exists && '✓'}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
             <button 
               className="btn btn-primary" 
@@ -410,17 +480,7 @@ const Departments = () => {
                 fontWeight: '600'
               }}
             >
-              {editingDept ? (
-                <>
-                  <span>💾</span>
-                  <span>Update Department</span>
-                </>
-              ) : (
-                <>
-                  <span>➕</span>
-                  <span>Create Department</span>
-                </>
-              )}
+              {editingDept ? 'Update Department' : 'Create Department'}
             </button>
           </div>
         </div>
@@ -457,23 +517,23 @@ const Departments = () => {
               borderBottom: '2px solid var(--border-color)'
             }}>
               <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '700' }}>
-                {editingSubDept ? '✏️ Edit Sub-Department' : '➕ Add Sub-Department'}
+                {editingSubDept ? 'Edit Sub-Department' : 'Add Sub-Department'}
               </h2>
               <button 
                 onClick={() => { setShowSubModal(false); setSelectedDept(null); setEditingSubDept(null); }} 
                 style={{ 
                   background: '#f3f4f6',
                   border: 'none', 
-                  fontSize: '24px', 
+                  fontSize: '14px', 
                   cursor: 'pointer',
-                  width: '36px',
-                  height: '36px',
+                  padding: '8px 16px',
                   borderRadius: '8px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   transition: 'all 0.3s',
-                  color: '#6b7280'
+                  color: '#6b7280',
+                  fontWeight: '500'
                 }}
                 onMouseEnter={(e) => {
                   e.target.style.background = '#e5e7eb';
@@ -484,7 +544,7 @@ const Departments = () => {
                   e.target.style.color = '#6b7280';
                 }}
               >
-                ×
+                Close
               </button>
             </div>
             <div style={{
@@ -521,17 +581,7 @@ const Departments = () => {
                 fontWeight: '600'
               }}
             >
-              {editingSubDept ? (
-                <>
-                  <span>💾</span>
-                  <span>Update Sub-Department</span>
-                </>
-              ) : (
-                <>
-                  <span>➕</span>
-                  <span>Create Sub-Department</span>
-                </>
-              )}
+              {editingSubDept ? 'Update Sub-Department' : 'Create Sub-Department'}
             </button>
           </div>
         </div>
