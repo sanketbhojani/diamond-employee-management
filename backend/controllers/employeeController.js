@@ -70,7 +70,8 @@ exports.getEmployees = async (req, res) => {
 // @access  Private
 exports.getEmployee = async (req, res) => {
   try {
-    const employee = await Employee.findById(req.params.id).populate('department', 'name');
+    const employee = await Employee.findById(req.params.id)
+      .populate('department', 'name');
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found' });
     }
@@ -172,7 +173,8 @@ exports.updateEmployee = async (req, res) => {
       req.params.id,
       employeeData,
       { new: true, runValidators: true }
-    ).populate('department', 'name');
+    )
+      .populate('department', 'name');
 
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found' });
@@ -234,7 +236,8 @@ exports.getEmployeesByDepartment = async (req, res) => {
     const employees = await Employee.find({
       department: req.params.departmentId,
       isActive: true
-    }).populate('department', 'name');
+    })
+      .populate('department', 'name');
 
     // Recalculate salaries for Chutak employees
     const employeesWithUpdatedSalaries = await Promise.all(

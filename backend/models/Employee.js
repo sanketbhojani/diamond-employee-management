@@ -114,6 +114,14 @@ const employeeSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  isManager: {
+    type: Boolean,
+    default: false
+  },
+  hasSpecialPermissions: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

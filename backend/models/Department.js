@@ -23,6 +23,11 @@ const departmentSchema = new mongoose.Schema({
     minlength: [1, 'Department name cannot be empty'],
     maxlength: [100, 'Department name cannot exceed 100 characters']
   },
+  manager: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Employee',
+    default: null
+  },
   subDepartments: [subDepartmentSchema]
 }, {
   timestamps: true

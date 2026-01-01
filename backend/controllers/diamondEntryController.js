@@ -1,21 +1,89 @@
+const mongoose = require('mongoose');
 const DiamondEntry = require('../models/DiamondEntry');
 const Employee = require('../models/Employee');
 const DiamondPrice = require('../models/DiamondPrice');
+const Department = require('../models/Department');
 
 // @desc    Get all diamond entries
 // @route   GET /api/diamond-entries
 // @access  Private
 exports.getDiamondEntries = async (req, res) => {
   try {
-    const { employee, startDate, endDate, department } = req.query;
+    const { employee, startDate, endDate, department, subDepartment } = req.query;
     
     let query = {};
-    if (employee) {
-      query.employee = employee;
-    }
+    
+    // Handle department and sub-department filtering first
+    let allowedEmployeeIds = null;
+    
     if (department) {
-      const employees = await Employee.find({ department, isActive: true });
-      query.employee = { $in: employees.map(emp => emp._id) };
+      // STRICT filtering: Only get employees from the selected department
+      // Handle both string and ObjectId formats
+      let departmentId = department;
+      if (mongoose.Types.ObjectId.isValid(department)) {
+        departmentId = new mongoose.Types.ObjectId(department);
+      }
+      
+      let employeeQuery = { 
+        department: departmentId, 
+        isActive: true 
+      };
+      // If subDepartment is also provided, filter by both
+      if (subDepartment) {
+        employeeQuery.subDepartment = subDepartment;
+      }
+      const employees = await Employee.find(employeeQuery).select('_id');
+      // Get list of allowed employee IDs
+      if (employees.length > 0) {
+        allowedEmployeeIds = employees.map(emp => emp._id);
+      } else {
+        // No employees in this department, return empty result
+        allowedEmployeeIds = [];
+      }
+    } else if (subDepartment) {
+      // If only subDepartment is provided (without department)
+      const employees = await Employee.find({ 
+        subDepartment: subDepartment, 
+        isActive: true 
+      }).select('_id');
+      if (employees.length > 0) {
+        allowedEmployeeIds = employees.map(emp => emp._id);
+      } else {
+        allowedEmployeeIds = [];
+      }
+    }
+    
+    // Now apply employee filter
+    if (employee) {
+      // Convert employee ID to ObjectId for proper comparison
+      let employeeId = employee;
+      if (mongoose.Types.ObjectId.isValid(employee)) {
+        employeeId = new mongoose.Types.ObjectId(employee);
+      }
+      
+      // If a specific employee is selected
+      if (allowedEmployeeIds !== null) {
+        // Check if the selected employee is in the allowed list (from department/sub-department filter)
+        const employeeInList = allowedEmployeeIds.some(id => {
+          const idStr = id.toString();
+          const empStr = employeeId.toString();
+          return idStr === empStr;
+        });
+        
+        if (employeeInList) {
+          // Employee is in the allowed list, filter by this specific employee
+          query.employee = employeeId;
+        } else {
+          // Selected employee is not in the filtered department/sub-department, return empty
+          query.employee = { $in: [] };
+        }
+      } else {
+        // No department/sub-department filter, just filter by employee
+        query.employee = employeeId;
+      }
+    } else if (allowedEmployeeIds !== null) {
+      // No specific employee selected, but department/sub-department filter is active
+      query.employee = { $in: allowedEmployeeIds };
     }
     if (startDate || endDate) {
       query.date = {};
@@ -23,15 +91,55 @@ exports.getDiamondEntries = async (req, res) => {
       if (endDate) query.date.$lte = new Date(endDate);
     }
 
-    const entries = await DiamondEntry.find(query)
-      .populate('employee', 'name employeeId department subDepartment employeeType grossSalary netSalary')
-      .populate('employee.department', 'name')
+    let entries = await DiamondEntry.find(query)
+      .populate({
+        path: 'employee',
+        select: 'name employeeId department subDepartment employeeType grossSalary netSalary pf pt',
+        populate: {
+          path: 'department',
+          select: 'name'
+        }
+      })
       .sort({ date: -1 });
+
+    // Ensure all departments are properly populated - convert to plain objects and check
+    const entriesWithPopulatedDepartments = await Promise.all(
+      entries.map(async (entry) => {
+        const entryObj = entry.toObject ? entry.toObject() : entry;
+        
+        if (entryObj.employee) {
+          // Check if department is populated (has name property)
+          if (!entryObj.employee.department || 
+              (typeof entryObj.employee.department === 'string') || 
+              (entryObj.employee.department._id && !entryObj.employee.department.name)) {
+            // Department is not populated, fetch it
+            const deptId = entryObj.employee.department 
+              ? (typeof entryObj.employee.department === 'string' 
+                  ? entryObj.employee.department 
+                  : entryObj.employee.department._id || entryObj.employee.department)
+              : null;
+            
+            if (deptId) {
+              const department = await Department.findById(deptId).select('name').lean();
+              if (department) {
+                entryObj.employee.department = department;
+              } else {
+                // Department not found, set to null
+                entryObj.employee.department = null;
+              }
+            } else {
+              entryObj.employee.department = null;
+            }
+          }
+        }
+        return entryObj;
+      })
+    );
 
     res.json({
       success: true,
-      count: entries.length,
-      entries
+      count: entriesWithPopulatedDepartments.length,
+      entries: entriesWithPopulatedDepartments
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -43,7 +151,14 @@ exports.getDiamondEntries = async (req, res) => {
 // @access  Private
 exports.getDiamondEntry = async (req, res) => {
   try {
-    const entry = await DiamondEntry.findById(req.params.id).populate('employee');
+    const entry = await DiamondEntry.findById(req.params.id)
+      .populate({
+        path: 'employee',
+        populate: {
+          path: 'department',
+          select: 'name'
+        }
+      });
     if (!entry) {
       return res.status(404).json({ message: 'Diamond entry not found' });
     }
@@ -124,8 +239,14 @@ exports.createDiamondEntry = async (req, res) => {
     }
 
     const populatedEntry = await DiamondEntry.findById(entry._id)
-      .populate('employee', 'name employeeId department subDepartment employeeType grossSalary netSalary')
-      .populate('employee.department', 'name');
+      .populate({
+        path: 'employee',
+        select: 'name employeeId department subDepartment employeeType grossSalary netSalary pf pt',
+        populate: {
+          path: 'department',
+          select: 'name'
+        }
+      });
 
     res.status(201).json({
       success: true,
@@ -205,7 +326,14 @@ exports.updateDiamondEntry = async (req, res) => {
       );
     }
 
-    const updatedEntry = await DiamondEntry.findById(req.params.id).populate('employee');
+    const updatedEntry = await DiamondEntry.findById(req.params.id)
+      .populate({
+        path: 'employee',
+        populate: {
+          path: 'department',
+          select: 'name'
+        }
+      });
 
     res.json({
       success: true,
@@ -221,7 +349,14 @@ exports.updateDiamondEntry = async (req, res) => {
 // @access  Private
 exports.deleteDiamondEntry = async (req, res) => {
   try {
-    const entry = await DiamondEntry.findById(req.params.id).populate('employee');
+    const entry = await DiamondEntry.findById(req.params.id)
+      .populate({
+        path: 'employee',
+        populate: {
+          path: 'department',
+          select: 'name'
+        }
+      });
     if (!entry) {
       return res.status(404).json({ message: 'Diamond entry not found' });
     }

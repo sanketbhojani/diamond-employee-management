@@ -41,6 +41,8 @@ const Employees = () => {
     pt: '0',
     aadhar: '',
     pan: '',
+    isManager: false,
+    hasSpecialPermissions: false,
     bankDetails: {
       accountNumber: '',
       ifscCode: '',
@@ -89,8 +91,9 @@ const Employees = () => {
     return dept ? (dept.subDepartments || []) : [];
   };
 
+
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     if (name.startsWith('bankDetails.')) {
       const field = name.split('.')[1];
       setFormData({
@@ -101,7 +104,18 @@ const Employees = () => {
         }
       });
     } else {
-      setFormData({ ...formData, [name]: value });
+      // Handle checkbox inputs
+      const newFormData = { 
+        ...formData, 
+        [name]: type === 'checkbox' ? checked : value 
+      };
+      
+      // If department changes, reset subDepartment
+      if (name === 'department') {
+        newFormData.subDepartment = '';
+      }
+      
+      setFormData(newFormData);
     }
   };
 
@@ -173,6 +187,8 @@ const Employees = () => {
       pt: employee.pt || 0,
       aadhar: employee.aadhar,
       pan: employee.pan,
+      isManager: employee.isManager || false,
+      hasSpecialPermissions: employee.hasSpecialPermissions || false,
       bankDetails: employee.bankDetails || {
         accountNumber: '',
         ifscCode: '',
@@ -199,6 +215,8 @@ const Employees = () => {
       pt: '0',
       aadhar: '',
       pan: '',
+      isManager: false,
+      hasSpecialPermissions: false,
       bankDetails: {
         accountNumber: '',
         ifscCode: '',

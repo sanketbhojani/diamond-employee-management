@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Department = require('../models/Department');
 const Employee = require('../models/Employee');
 
@@ -6,7 +7,9 @@ const Employee = require('../models/Employee');
 // @access  Private
 exports.getDepartments = async (req, res) => {
   try {
-    const departments = await Department.find().populate('subDepartments.employees');
+    const departments = await Department.find()
+      .populate('subDepartments.employees')
+      .populate('manager', 'name employeeId email');
     res.json({
       success: true,
       departments
@@ -21,7 +24,9 @@ exports.getDepartments = async (req, res) => {
 // @access  Private
 exports.getDepartment = async (req, res) => {
   try {
-    const department = await Department.findById(req.params.id).populate('subDepartments.employees');
+    const department = await Department.findById(req.params.id)
+      .populate('subDepartments.employees')
+      .populate('manager', 'name employeeId email');
     if (!department) {
       return res.status(404).json({ message: 'Department not found' });
     }
@@ -197,6 +202,109 @@ exports.deleteSubDepartment = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// @desc    Assign manager to department
+// @route   PUT /api/departments/:id/manager
+// @access  Private
+exports.assignManager = async (req, res) => {
+  try {
+    const { managerId } = req.body;
+    const departmentId = req.params.id;
+    
+    console.log('Assign Manager - Request received:', {
+      departmentId,
+      managerId,
+      body: req.body
+    });
+
+    // Validate department ID format
+    if (!departmentId || departmentId === 'undefined' || departmentId === 'null') {
+      return res.status(400).json({ message: 'Invalid department ID' });
+    }
+
+    // Validate MongoDB ObjectId format for department
+    if (!mongoose.Types.ObjectId.isValid(departmentId)) {
+      return res.status(400).json({ message: 'Invalid department ID format' });
+    }
+
+    // Find department
+    const department = await Department.findById(departmentId);
+    if (!department) {
+      console.log('Department not found:', departmentId);
+      return res.status(404).json({ message: 'Department not found. Please refresh the page and try again.' });
+    }
+
+    // If managerId is provided, verify the employee exists and belongs to this department
+    if (managerId && managerId !== 'null' && managerId !== '' && managerId !== 'undefined') {
+      // Validate employee ID format - must be valid MongoDB ObjectId
+      if (!mongoose.Types.ObjectId.isValid(managerId)) {
+        return res.status(400).json({ message: 'Invalid employee ID format' });
+      }
+
+      const employee = await Employee.findById(managerId);
+      if (!employee) {
+        console.log('Employee not found:', managerId);
+        return res.status(404).json({ message: 'Employee not found. Please refresh the page and try again.' });
+      }
+      
+      // Get employee's department ID (handle both populated and non-populated)
+      if (!employee.department) {
+        return res.status(400).json({ 
+          message: 'Employee does not have a department assigned' 
+        });
+      }
+      
+      // Normalize department ID to string for comparison
+      // Since Employee.findById doesn't populate, department will be an ObjectId
+      // Convert both IDs to strings for reliable comparison
+      const employeeDeptId = employee.department.toString();
+      const deptIdStr = departmentId.toString();
+      
+      console.log('Comparing department IDs:', {
+        employeeDeptId,
+        deptIdStr,
+        employeeDeptIdType: typeof employeeDeptId,
+        deptIdStrType: typeof deptIdStr,
+        match: employeeDeptId === deptIdStr
+      });
+      
+      if (employeeDeptId !== deptIdStr) {
+        console.log('Department ID mismatch - Employee department:', employeeDeptId, 'Target department:', deptIdStr);
+        return res.status(400).json({ 
+          message: 'Employee must belong to this department to be assigned as manager' 
+        });
+      }
+      
+      department.manager = managerId;
+      console.log('Setting manager:', managerId);
+    } else {
+      // Remove manager if managerId is empty/null
+      department.manager = null;
+      console.log('Removing manager');
+    }
+
+    await department.save();
+    await department.populate('manager', 'name employeeId email');
+
+    console.log('Manager assignment successful:', {
+      departmentId: department._id,
+      manager: department.manager ? department.manager.name : 'None'
+    });
+
+    res.json({
+      success: true,
+      message: department.manager ? 'Manager assigned successfully' : 'Manager removed successfully',
+      department
+    });
+  } catch (error) {
+    console.error('Error in assignManager:', error);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 

@@ -4,28 +4,55 @@ import api from '../utils/api';
 
 const Departments = () => {
   const [departments, setDepartments] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showSubModal, setShowSubModal] = useState(false);
+  const [showManagerModal, setShowManagerModal] = useState(false);
   const [editingDept, setEditingDept] = useState(null);
   const [selectedDept, setSelectedDept] = useState(null);
   const [formData, setFormData] = useState({ name: '' });
   const [subDeptName, setSubDeptName] = useState('');
   const [editingSubDept, setEditingSubDept] = useState(null);
+  const [managerSearch, setManagerSearch] = useState('');
+  const [selectedManager, setSelectedManager] = useState(null);
 
   // Predefined department suggestions (optional)
   const departmentSuggestions = ['Deepak', 'Laser', 'Galaxy', 'R Galaxy', 'Russian', 'Sarin', '4P'];
 
   useEffect(() => {
     fetchDepartments();
+    fetchEmployees();
   }, []);
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await api.get('/employees');
+      const employeesList = response.data.employees || [];
+      console.log('Fetched employees:', employeesList.length);
+      // Ensure all employees have valid IDs and departments
+      const validEmployees = employeesList.filter(emp => 
+        emp && emp._id && emp.department && (emp.isActive !== false)
+      );
+      console.log('Valid employees:', validEmployees.length);
+      setEmployees(validEmployees);
+    } catch (error) {
+      console.error('Failed to fetch employees:', error);
+      toast.error('Failed to fetch employees. Please refresh the page.');
+    }
+  };
 
   const fetchDepartments = async () => {
     try {
       const response = await api.get('/departments');
-      setDepartments(response.data.departments);
+      const depts = response.data.departments || [];
+      console.log('Fetched departments:', depts.length);
+      // Ensure all departments have valid IDs
+      const validDepts = depts.filter(dept => dept && dept._id);
+      setDepartments(validDepts);
     } catch (error) {
-      toast.error('Failed to fetch departments');
+      console.error('Failed to fetch departments:', error);
+      toast.error('Failed to fetch departments. Please refresh the page.');
     } finally {
       setLoading(false);
     }
@@ -120,6 +147,156 @@ const Departments = () => {
     setShowSubModal(true);
   };
 
+  const openManagerModal = (dept) => {
+    console.log('Opening manager modal for department:', dept);
+    setSelectedDept(dept);
+    // Set current manager if exists - normalize to string ID
+    const currentManagerId = dept.manager?._id || dept.manager || null;
+    const normalizedManagerId = currentManagerId ? (currentManagerId.toString ? currentManagerId.toString() : String(currentManagerId)) : null;
+    setSelectedManager(normalizedManagerId);
+    setManagerSearch('');
+    setShowManagerModal(true);
+    
+    // Ensure employees are loaded
+    if (employees.length === 0) {
+      console.log('No employees loaded, fetching...');
+      fetchEmployees();
+    } else {
+      console.log('Employees already loaded:', employees.length);
+    }
+  };
+
+  const handleAssignManager = async () => {
+    if (!selectedDept) {
+      toast.error('Please select a department');
+      return;
+    }
+    
+    // Validate department ID
+    if (!selectedDept._id) {
+      toast.error('Invalid department. Please refresh the page and try again.');
+      return;
+    }
+    
+    try {
+      // Prepare payload - send null if no manager selected, otherwise send the manager ID
+      // selectedManager is already a string ID at this point
+      const managerId = selectedManager || null;
+      // Normalize department ID to string
+      const departmentId = selectedDept._id.toString ? selectedDept._id.toString() : String(selectedDept._id);
+      
+      // Final validation
+      if (!departmentId || departmentId === 'undefined' || departmentId === 'null') {
+        toast.error('Invalid department ID. Please refresh the page.');
+        return;
+      }
+      
+      const payload = { managerId };
+      const url = `/departments/${departmentId}/manager`;
+      
+      console.log('Assigning manager - Request:', { 
+        url, 
+        departmentId, 
+        managerId,
+        payload,
+        selectedDept,
+        selectedManager
+      });
+      
+      const response = await api.put(url, payload);
+      
+      console.log('Manager assignment - Success:', response.data);
+      
+      toast.success(response.data.message || (selectedManager ? 'Manager assigned successfully' : 'Manager removed successfully'));
+      
+      // Close modal and reset state
+      setShowManagerModal(false);
+      setSelectedDept(null);
+      setSelectedManager(null);
+      setManagerSearch('');
+      
+      // Refresh departments to show updated manager
+      await fetchDepartments();
+    } catch (error) {
+      console.error('Error assigning manager:', error);
+      console.error('Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        url: error.config?.url,
+        method: error.config?.method,
+        requestData: error.config?.data
+      });
+      
+      // Show user-friendly error message
+      let errorMessage = 'Failed to assign manager';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      const statusCode = error.response?.status;
+      if (statusCode === 404) {
+        errorMessage = 'Department or employee not found. Please refresh and try again.';
+      } else if (statusCode === 400) {
+        errorMessage = error.response?.data?.message || 'Invalid request. Please check the selected employee belongs to this department.';
+      } else if (statusCode === 401) {
+        errorMessage = 'You are not authorized. Please login again.';
+      } else if (statusCode === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      }
+      
+      toast.error(errorMessage);
+    }
+  };
+
+  const getFilteredEmployees = () => {
+    if (!selectedDept) {
+      console.log('getFilteredEmployees: No selected department');
+      return [];
+    }
+    
+    // Compare department IDs properly (handle both ObjectId and string)
+    const deptId = selectedDept._id?.toString() || selectedDept._id;
+    console.log('getFilteredEmployees: Filtering for department ID:', deptId, 'Total employees:', employees.length);
+    
+    const deptEmployees = employees.filter(emp => {
+      // Handle both populated and non-populated department
+      let empDeptId;
+      if (emp.department && typeof emp.department === 'object' && emp.department._id) {
+        // Department is populated
+        empDeptId = emp.department._id.toString();
+      } else if (emp.department && typeof emp.department === 'object' && !emp.department._id) {
+        // Department is ObjectId directly
+        empDeptId = emp.department.toString();
+      } else {
+        // Department is ObjectId or string
+        empDeptId = emp.department?.toString() || emp.department;
+      }
+      
+      const matches = empDeptId === deptId && emp.isActive !== false;
+      if (matches) {
+        console.log('Employee matches:', emp.name, 'Dept ID:', empDeptId, '===', deptId);
+      }
+      return matches;
+    });
+    
+    console.log('getFilteredEmployees: Found', deptEmployees.length, 'employees in department');
+    
+    if (!managerSearch) return deptEmployees;
+    
+    const searchLower = managerSearch.toLowerCase();
+    const searched = deptEmployees.filter(emp => 
+      (emp.name || '').toLowerCase().includes(searchLower) ||
+      (emp.employeeId || '').toLowerCase().includes(searchLower) ||
+      (emp.email || '').toLowerCase().includes(searchLower)
+    );
+    console.log('getFilteredEmployees: After search,', searched.length, 'employees');
+    return searched;
+  };
+
   if (loading) {
     return (
       <div className="loading">
@@ -210,6 +387,9 @@ const Departments = () => {
                   <p style={{ margin: 0, color: '#6b7280', fontSize: '14px' }}>
                     {dept.subDepartments?.length || 0} Sub-Department{dept.subDepartments?.length !== 1 ? 's' : ''}
                   </p>
+                  <p style={{ margin: '4px 0 0 0', color: dept.manager ? '#3b82f6' : '#9ca3af', fontSize: '13px', fontWeight: '600' }}>
+                    👤 Manager: {dept.manager ? `${dept.manager.name} (${dept.manager.employeeId})` : 'Not Assigned'}
+                  </p>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button 
@@ -238,6 +418,55 @@ const Departments = () => {
               </div>
               
               <div>
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  marginBottom: '16px'
+                }}>
+                  <strong style={{ color: '#374151', fontSize: '15px' }}>👤 Manager</strong>
+                  <button 
+                    className="btn btn-primary" 
+                    onClick={() => openManagerModal(dept)} 
+                    style={{ 
+                      padding: '6px 12px', 
+                      fontSize: '12px',
+                      minWidth: 'auto'
+                    }}
+                  >
+                    {dept.manager ? 'Change' : 'Assign'}
+                  </button>
+                </div>
+                {dept.manager ? (
+                  <div style={{ 
+                    padding: '12px 16px', 
+                    background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', 
+                    borderRadius: '8px', 
+                    marginBottom: '16px',
+                    border: '1px solid rgba(59, 130, 246, 0.2)'
+                  }}>
+                    <div style={{ fontWeight: '600', color: '#1e40af', marginBottom: '4px' }}>
+                      {dept.manager.name || 'Unknown'}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#3b82f6' }}>
+                      ID: {dept.manager.employeeId || 'N/A'} | {dept.manager.email || 'N/A'}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ 
+                    padding: '12px 16px', 
+                    background: '#f9fafb',
+                    borderRadius: '8px',
+                    marginBottom: '16px',
+                    border: '1px dashed #e5e7eb',
+                    textAlign: 'center',
+                    color: '#9ca3af',
+                    fontSize: '13px'
+                  }}>
+                    No manager assigned
+                  </div>
+                )}
+                
                 <div style={{ 
                   display: 'flex', 
                   justifyContent: 'space-between', 
@@ -582,6 +811,231 @@ const Departments = () => {
               }}
             >
               {editingSubDept ? 'Update Sub-Department' : 'Create Sub-Department'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Manager Assignment Modal */}
+      {showManagerModal && selectedDept && (
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          background: 'rgba(0,0,0,0.6)', 
+          backdropFilter: 'blur(4px)',
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          zIndex: 2000,
+          padding: '20px'
+        }}>
+          <div className="card" style={{ 
+            width: '100%', 
+            maxWidth: '600px', 
+            position: 'relative',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '24px',
+              paddingBottom: '16px',
+              borderBottom: '2px solid var(--border-color)'
+            }}>
+              <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '700' }}>
+                Assign Manager
+              </h2>
+              <button 
+                onClick={() => { 
+                  setShowManagerModal(false); 
+                  setSelectedDept(null); 
+                  setSelectedManager(null);
+                  setManagerSearch('');
+                }} 
+                style={{ 
+                  background: '#f3f4f6',
+                  border: 'none', 
+                  fontSize: '14px', 
+                  cursor: 'pointer',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.3s',
+                  color: '#6b7280',
+                  fontWeight: '500'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = '#e5e7eb';
+                  e.target.style.color = '#1f2937';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = '#f3f4f6';
+                  e.target.style.color = '#6b7280';
+                }}
+              >
+                Close
+              </button>
+            </div>
+            
+            <div style={{
+              padding: '12px 16px',
+              background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              border: '1px solid rgba(59, 130, 246, 0.2)'
+            }}>
+              <label style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Department
+              </label>
+              <p style={{ margin: '4px 0 0 0', fontSize: '18px', fontWeight: '600', color: '#1e40af' }}>
+                {selectedDept.name}
+              </p>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <label>Search Employee</label>
+              <input 
+                type="text" 
+                value={managerSearch} 
+                onChange={(e) => setManagerSearch(e.target.value)} 
+                placeholder="Search by name, ID, or email..."
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  fontSize: '15px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '8px',
+                  transition: 'all 0.3s',
+                  outline: 'none'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#6366f1';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e5e7eb';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', color: '#374151' }}>
+                Select Manager
+              </label>
+              <div style={{ 
+                maxHeight: '300px', 
+                overflowY: 'auto',
+                border: '2px solid #e5e7eb',
+                borderRadius: '8px',
+                padding: '8px'
+              }}>
+                <div 
+                  onClick={() => setSelectedManager(null)}
+                  style={{
+                    padding: '12px 16px',
+                    marginBottom: '8px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    background: selectedManager === null ? '#eff6ff' : '#ffffff',
+                    border: selectedManager === null ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (selectedManager !== null) {
+                      e.currentTarget.style.background = '#f9fafb';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (selectedManager !== null) {
+                      e.currentTarget.style.background = '#ffffff';
+                    }
+                  }}
+                >
+                  <div style={{ fontWeight: '600', color: '#1f2937' }}>No Manager</div>
+                  <div style={{ fontSize: '12px', color: '#6b7280' }}>Remove current manager</div>
+                </div>
+                {getFilteredEmployees().map(emp => {
+                  const empIdStr = emp._id ? (emp._id.toString ? emp._id.toString() : String(emp._id)) : '';
+                  const isSelected = selectedManager && selectedManager.toString() === empIdStr;
+                  
+                  return (
+                  <div 
+                    key={emp._id}
+                    onClick={() => {
+                      console.log('Selecting manager:', emp);
+                      setSelectedManager(empIdStr);
+                    }}
+                    style={{
+                      padding: '12px 16px',
+                      marginBottom: '8px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      background: isSelected ? '#eff6ff' : '#ffffff',
+                      border: isSelected ? '2px solid #3b82f6' : '1px solid #e5e7eb',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.background = '#f9fafb';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.background = '#ffffff';
+                      }
+                    }}
+                  >
+                    <div style={{ fontWeight: '600', color: '#1f2937', marginBottom: '4px' }}>
+                      {emp.name}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                      ID: {emp.employeeId} | {emp.email}
+                    </div>
+                  </div>
+                  );
+                })}
+                {getFilteredEmployees().length === 0 && (
+                  <div style={{ 
+                    padding: '24px', 
+                    textAlign: 'center',
+                    color: '#9ca3af',
+                    fontSize: '14px'
+                  }}>
+                    {employees.length === 0 
+                      ? 'Loading employees...' 
+                      : `No employees found in this department. Total employees: ${employees.length}`}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button 
+              className="btn btn-primary" 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleAssignManager();
+              }}
+              disabled={!selectedDept}
+              style={{ 
+                width: '100%',
+                padding: '14px',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: selectedDept ? 'pointer' : 'not-allowed',
+                opacity: selectedDept ? 1 : 0.6
+              }}
+            >
+              {selectedManager ? 'Assign Manager' : 'Remove Manager'}
             </button>
           </div>
         </div>

@@ -39,7 +39,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/employee_
 const initializeDepartments = async () => {
   try {
     const Department = require('./models/Department');
-    const defaultDepartments = ['Deepak', 'Laser', 'Galaxy', 'R Galaxy', 'Russian', 'Sarin', '4P'];
+    const defaultDepartments = ['Deepak', 'Laser', 'Galaxy', 'R Galaxy', 'Russian', 'Sarin'];
     
     for (const deptName of defaultDepartments) {
       const existingDept = await Department.findOne({ name: deptName });
